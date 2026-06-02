@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Eqeng · Dipol</title>
+<style>
+  /* ── FONTES EMBUTIDAS (sem dependência externa) ── */
+  @import url('data:text/css,');
+
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2028;
+    --border: #2a2d38;
+    --accent: #e8b84b;
+    --accent2: #4b8fe8;
+    --success: #4be87a;
+    --muted: #555a6e;
+    --text: #ecedf2;
+    --text2: #9a9db0;
+    --risk-alto: #e84b4b;
+    --risk-medio: #e8844b;
+    --risk-baixo: #4b8fe8;
+    --risk-sem: #555a6e;
+    --status-a: #4be87a;
+    --status-b: #e8b84b;
+    --status-c: #e84b4b;
+    --status-d: #555a6e;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; overflow-x:hidden; }
+
+  /* ── AVISO PORTRAIT ── */
+  #portrait-warning {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+    padding: 40px;
+  }
+  #portrait-warning .warn-icon { font-size: 56px; animation: rotate 2s ease-in-out infinite alternate; }
+  @keyframes rotate { from { transform: rotate(-15deg); } to { transform: rotate(15deg); } }
+  #portrait-warning h2 { font-size: 20px; font-weight: 700; color: var(--text); }
+  #portrait-warning p { font-size: 14px; color: var(--text2); line-height: 1.6; max-width: 280px; }
+  #portrait-warning .warn-badge {
+    padding: 10px 24px; border-radius: 20px;
+    background: var(--accent); color: #0e0f13;
+    font-weight: 700; font-size: 13px;
+    border: none; cursor: pointer;
+  }
+
+  /* Mostra aviso apenas em portrait em telas pequenas */
+  @media screen and (max-width: 600px) and (orientation: portrait) {
+    #portrait-warning { display: flex; }
+    body > *:not(#portrait-warning) { display: none !important; }
+  }
+
+  header {
+    padding: 22px 36px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top:0; background:var(--bg); z-index:100;
+  }
+  .logo-title { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+  .logo-sub { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
+  .header-badge { font-family: var(--font-mono); font-size: 10px; color: var(--muted); padding: 5px 13px; border: 1px solid var(--border); border-radius: 20px; }
+
+  .main-layout { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 77px); }
+
+  .left-panel { padding: 24px 32px; border-right: 1px solid var(--border); overflow-y: auto; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; position: relative; overflow: hidden; cursor: pointer; transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-card::after { content:''; position:absolute; bottom:0;left:0;right:0; height:3px; border-radius:0 0 12px 12px; }
+  .stat-card.green::after { background: var(--status-a); }
+  .stat-card.yellow::after { background: var(--status-b); }
+  .stat-card.red::after { background: var(--status-c); }
+  .stat-card.gray::after { background: var(--status-d); }
+  .stat-num { font-size: 34px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .stat-card.green .stat-num { color: var(--status-a); }
+  .stat-card.yellow .stat-num { color: var(--status-b); }
+  .stat-card.red .stat-num { color: var(--status-c); }
+  .stat-card.gray .stat-num { color: var(--muted); }
+  .stat-label { font-size: 10px; color: var(--text2); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  .filters { display: flex; gap: 7px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .filter-btn {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border); background: transparent;
+    color: var(--text2); font-family: var(--font); transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active { background: var(--accent); color: #0e0f13; border-color: var(--accent); }
+  .filter-select {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text2); font-family: var(--font); outline: none;
+  }
+
+  .section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+  .demand-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .demand-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 13px 16px; cursor: pointer; transition: all 0.2s; position: relative;
+    overflow: hidden; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
+  }
+  .demand-card:hover { border-color: var(--accent); background: var(--surface2); }
+  .demand-card.selected { border-color: var(--accent); background: var(--surface2); box-shadow: 0 0 0 1px var(--accent); }
+  .demand-card::before { content:''; position:absolute; left:0;top:0;bottom:0; width:4px; border-radius:10px 0 0 10px; }
+  .demand-card[data-risk="Alto"]::before { background: var(--risk-alto); }
+  .demand-card[data-risk="Médio"]::before { background: var(--risk-medio); }
+  .demand-card[data-risk="Baixo"]::before { background: var(--risk-baixo); }
+  .demand-card[data-risk="Sem risco"]::before { background: var(--risk-sem); }
+
+  .demand-info { padding-left: 8px; }
+  .demand-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.3; }
+  .demand-meta { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+
+  .tag { font-family: var(--font-mono); font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+  .tag-risk-Alto  { background: rgba(232,75,75,0.15);  color: var(--risk-alto); }
+  .tag-risk-Médio { background: rgba(232,132,75,0.15); color: var(--risk-medio); }
+  .tag-risk-Baixo { background: rgba(75,143,232,0.15); color: var(--risk-baixo); }
+  .tag-risk-Sem   { background: rgba(85,90,110,0.2);   color: var(--muted); }
+  .tag-status-A { background: rgba(75,232,122,0.12); color: var(--status-a); }
+  .tag-status-B { background: rgba(232,184,75,0.12); color: var(--status-b); }
+  .tag-status-C { background: rgba(232,75,75,0.12);  color: var(--status-c); }
+  .tag-status-D { background: rgba(85,90,110,0.2);   color: var(--muted); }
+  .tag-person   { background: rgba(75,143,232,0.1);  color: var(--accent2); }
+  .tag-deadline { background: rgba(232,184,75,0.1);  color: var(--accent); }
+
+  .feedback-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  .right-panel {
+    padding: 24px 22px; background: var(--surface); display: flex; flex-direction: column; gap: 18px;
+    overflow-y: auto; max-height: calc(100vh - 77px); position: sticky; top: 77px;
+  }
+
+  .detail-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px; color:var(--muted); text-align:center; gap:10px; font-size:12px; }
+  .detail-title { font-size: 16px; font-weight: 800; line-height: 1.3; margin-bottom: 10px; color: var(--text); }
+  .detail-row { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--border); gap:10px; }
+  .detail-row:last-of-type { border-bottom: none; }
+  .detail-key { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700; min-width: 80px; }
+  .detail-val { font-size: 12px; color: var(--text); text-align: right; line-height: 1.4; }
+
+  .obs-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px; font-size: 11px; color: var(--text2); line-height: 1.6; font-style: italic; }
+  .panel-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  .feedback-textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; color: var(--text); font-family: var(--font); font-size: 12px;
+    resize: vertical; min-height: 80px; outline: none; transition: border-color 0.2s; line-height: 1.5;
+  }
+  .feedback-textarea:focus { border-color: var(--accent); }
+  .saved-feedback { background: rgba(232,184,75,0.08); border: 1px solid rgba(232,184,75,0.25); border-radius: 8px; padding: 10px; font-size: 11px; color: var(--accent); line-height: 1.6; display: none; margin-bottom: 8px; }
+
+  .btn { padding: 8px 18px; border-radius: 8px; font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #0e0f13; }
+  .btn-primary:hover { background: #f0c860; }
+  .btn-secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); color: var(--text); }
+
+  .no-results { text-align: center; padding: 50px 20px; color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .card-anim { opacity:0; animation:fadeIn 0.3s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- AVISO MODO RETRATO -->
+<div id="portrait-warning">
+  <div class="warn-icon">📱↔️</div>
+  <h2>Gire o celular</h2>
+  <p>Este painel foi desenvolvido para ser visualizado em <strong>modo paisagem</strong>. Gire o dispositivo para continuar.</p>
+  <button class="warn-badge" onclick="document.getElementById('portrait-warning').style.display='none'">
+    Continuar mesmo assim
+  </button>
+</div>
+
+<header>
+  <div>
+    <div class="logo-title">Painel Eqeng · Dipol</div>
+    <div class="logo-sub">Acompanhamento de demandas · 8ª RF</div>
+  </div>
+  <div class="header-badge">74 demandas · Jun/2026</div>
+</header>
+
+<div class="main-layout">
+  <div class="left-panel">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="filters">
+      <span class="filter-label">Status</span>
+      <button class="filter-btn active" data-filter="status" data-val="all">Todos</button>
+      <button class="filter-btn" data-filter="status" data-val="A">Trabalhando</button>
+      <button class="filter-btn" data-filter="status" data-val="B">Em espera</button>
+      <button class="filter-btn" data-filter="status" data-val="C">Sem previsão</button>
+      <button class="filter-btn" data-filter="status" data-val="D">Concluído</button>
+      &nbsp;
+      <span class="filter-label">Risco</span>
+      <button class="filter-btn" data-filter="risk" data-val="all">Todos</button>
+      <button class="filter-btn" data-filter="risk" data-val="Alto">Alto</button>
+      <button class="filter-btn" data-filter="risk" data-val="Médio">Médio</button>
+      <button class="filter-btn" data-filter="risk" data-val="Baixo">Baixo</button>
+      &nbsp;
+      <select class="filter-select" id="person-filter"><option value="all">👤 Todos</option></select>
+    </div>
+    <div class="section-title" id="list-count">Demandas</div>
+    <div class="demand-list" id="demand-list"></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="detail-empty" id="detail-empty">
+      <span style="font-size:28px">←</span>
+      Selecione uma demanda para ver detalhes e adicionar feedback
+    </div>
+    <div id="detail-content" style="display:none">
+      <div class="panel-section-title">Demanda selecionada</div>
+      <div class="detail-title" id="d-title"></div>
+      <div class="detail-row"><span class="detail-key">Responsável</span><span class="detail-val" id="d-resp"></span></div>
+      <div class="detail-row"><span class="detail-key">Risco</span><span class="detail-val" id="d-risk"></span></div>
+      <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val" id="d-status"></span></div>
+      <div class="detail-row"><span class="detail-key">Prazo est.</span><span class="detail-val" id="d-prazo"></span></div>
+      <div class="detail-row" id="d-proc-row"><span class="detail-key">Processo</span><span class="detail-val" id="d-proc"></span></div>
+      <div id="d-obs-wrap" style="margin:12px 0;display:none">
+        <div class="section-title" style="margin-bottom:6px">Observação</div>
+        <div class="obs-box" id="d-obs"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="panel-section-title">💬 Feedback da Chefia</div>
+        <div class="saved-feedback" id="saved-feedback"></div>
+        <textarea class="feedback-textarea" id="feedback-input" placeholder="Digite seu feedback ou orientação sobre esta demanda..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary" style="flex:1;font-size:11px;padding:8px" onclick="saveFeedback()">Salvar</button>
+          <button class="btn btn-secondary" style="font-size:11px;padding:8px" onclick="clearFeedback()">Limpar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW_DATA = [{"iniciativa":"Elaboração de projetos CFTV CACs Derat","risco":"Médio","responsavel":"Daniel / André","prazo":"2026-06-01","processo":"13032.209989/2026-37","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Laudo Estrutural - DRF/Guarulhos","risco":"Baixo","responsavel":"Gustavo / Marcos","prazo":"2026-04-30","processo":"13032.150250/2026-10","observacao":"Aguardando emissão do laudo","andamento":"A - Sendo trabalhado"},{"iniciativa":"Laudo Estrutural - DRF/Pricacicaba","risco":"Baixo","responsavel":"Gustavo / Marcos","prazo":"2026-04-30","processo":"13032.150055/2026-81","observacao":"Aguardando emissão do laudo","andamento":"A - Sendo trabalhado"},{"iniciativa":"Modernização elevadores Direp/Santo André/Osasco","risco":"Médio","responsavel":"Daniel / Epprecht","prazo":"2027-06-01","processo":"13032.901943/2025-92","observacao":"A One Elevadores assumiu a manutenção dos elavadores da Direp. O projeto executivo foi entregue e está sendo análisado pela fiscalização","andamento":"A - Sendo trabalhado"},{"iniciativa":"Assessoria modernização dos elevadores","risco":"Médio","responsavel":"Adilson","prazo":"2027-06-01","processo":"13032.906756/2025-03","observacao":"Projeto executivo entregue para análise, aguardando resposta","andamento":"A - Sendo trabalhado"},{"iniciativa":"Adaptação para obtenção de AVCB DRF/Osasco","risco":"Médio","responsavel":"Adilson","prazo":"2026-05-10","processo":"13032.897579/2025-59","observacao":"Obra em etapa final.","andamento":"A - Sendo trabalhado"},{"iniciativa":"Projeto CFTV e Alarme Direp/Florêncio","risco":"Médio","responsavel":"André / Paulo","prazo":"2026-08-01","processo":"13032.680724/2025-64","observacao":"Aguardando unidade demandante caracterizar","andamento":"A - Sendo trabalhado"},{"iniciativa":"Projeto Executivo para retomada da obra da ARF/Itanhaém","risco":"Alto","responsavel":"Marcos / Gustavo / Vinícius / Barbieri","prazo":"2026-06-30","processo":"13032.216178/2025-10","observacao":"Projeto e orçamento entregue","andamento":"A - Sendo trabalhado"},{"iniciativa":"Atualização do Projeto e Orçamento para construção da nova DRF/São José dos Campos","risco":"Alto","responsavel":"André / Paulo","prazo":"","processo":"","observacao":"Licitação - Fase de habilitação","andamento":"A - Sendo trabalhado"},{"iniciativa":"Aluguel nova DRF/Ourinhos","risco":"Sem risco","responsavel":"Vinícius","prazo":"2026-06-30","processo":"","observacao":"Quadro de Requisitos e Estudo de Necessidaes feitos - Aguardando licitação para trabalhar no layout","andamento":"A - Sendo trabalhado"},{"iniciativa":"Contrato para novas divisórias","risco":"Sem risco","responsavel":"Vinícius","prazo":"2026-07-17","processo":"13032.011462/2025-93","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Novo layout ESPEI","risco":"Sem risco","responsavel":"Gustavo / Vinícius","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Novo layout ALF/Viracopos","risco":"Sem risco","responsavel":"Gustavo / Vinícius","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Novo layout Direp/Florêncio","risco":"Sem risco","responsavel":"Marcos / Gustavo","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Troca da caixa d'água DMA/Araraquara","risco":"Médio","responsavel":"Epprecht / Gustavo","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Reparos caixa d'água DRF/Santo André","risco":"Médio","responsavel":"Barbieri / Gustavo","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Reparos no telhado do DMA/Bauru","risco":"Baixo","responsavel":"Barbieri","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Reparo muro de contenção DRF/Bauru","risco":"Alto","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Aguardando contratação de laudo estrutural e contato com a construtora para providências","andamento":"A - Sendo trabalhado"},{"iniciativa":"Projeto modernização ar-condicionado Sorocaba e São José do Rio Preto","risco":"Alto","responsavel":"André / Paulo","prazo":"2026-04-06","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Planejamento e orçamento licitação regional de pintura","risco":"Baixo","responsavel":"Vinícius / Gustavo","prazo":"2026-04-13","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Acompanhamento reforma canil DRF/Santos","risco":"Baixo","responsavel":"Marcos","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Orientação laudos - patologias DRF/Ribeirão Preto","risco":"Baixo","responsavel":"Barbieri / Vinícius","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Laudo Acessiblidade Regional","risco":"Alto","responsavel":"Vinícius / Barbieri","prazo":"","processo":"","observacao":"Planejamento/Levantamento de área das unidades","andamento":"A - Sendo trabalhado"},{"iniciativa":"Reparo/Reforma das pastilha da Avanhandava","risco":"Alto","responsavel":"André / Vinícius / Gustavo","prazo":"","processo":"","observacao":"Realizamos medidas paleativas emergenciais, aguardamos a licitação regional de pintura para reparos futuros","andamento":"A - Sendo trabalhado"},{"iniciativa":"AVCB Regional","risco":"Alto","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Foi realizado o planejamento, estamos aguardando a licitação para reiniciar a demanda","andamento":"A - Sendo trabalhado"},{"iniciativa":"Estudos para Imlantação do Mercado Livre de Energia","risco":"Baixo","responsavel":"André","prazo":"","processo":"","observacao":"Estudos para implantação na RFB, conduzidos pela Dieng com participação da 8ªRF","andamento":"A - Sendo trabalhado"},{"iniciativa":"Migração/Implantação SPUnet","risco":"Sem risco","responsavel":"Vinícius","prazo":"","processo":"","observacao":"","andamento":"A - Sendo trabalhado"},{"iniciativa":"Planejamento laudo viabilidade técnico-economica Elevadores","risco":"Sem risco","responsavel":"Paulo / Epprecht","prazo":"","processo":"","observacao":"Fase de planejamento","andamento":"A - Sendo trabalhado"},{"iniciativa":"Implantação do novo PIU Manutenção - UG ALF/Santos","risco":"Baixo","responsavel":"Adilson / Daniel / André","prazo":"2026-04-17","processo":"","observacao":"Em deslocamento para levantamento do inventário","andamento":"A - Sendo trabalhado"},{"iniciativa":"Estudos para modernização cabine primária DRF/Campinas","risco":"Alto","responsavel":"André","prazo":"","processo":"","observacao":"Levantamento, orçamento","andamento":"A - Sendo trabalhado"},{"iniciativa":"Projeto para troca da tubulação do Chiller da ALF/Santos","risco":"Médio","responsavel":"Paulo","prazo":"","processo":"","observacao":"Levantamento, orçamento","andamento":"A - Sendo trabalhado"},{"iniciativa":"Fechamento DMA-Marília","risco":"Baixo","responsavel":"Epprecht","prazo":"2026-05-15","processo":"","observacao":"Levantamento, orçamento","andamento":"A - Sendo trabalhado"},{"iniciativa":"Solução paliativa ar-condicionado Sorocaba","risco":"Alto","responsavel":"André / Paulo","prazo":"2026-04-13","processo":"","observacao":"Demanda suspensa","andamento":"B - Em espera / próximo"},{"iniciativa":"Reparo telhado DRF/Piracicaba","risco":"Médio","responsavel":"Barbieri / Gustavo","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Troca de piso elevado DRF/Jundiaí e ARF/Sâo Bernardo","risco":"Sem risco","responsavel":"Vinícius / Barbieri","prazo":"","processo":"","observacao":"Aguardando homologação da ATA","andamento":"B - Em espera / próximo"},{"iniciativa":"Reforma banheiro ESPEI","risco":"Sem risco","responsavel":"André / Gustavo","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Reforma gradil DRF/Limeira","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Compartilhamento/Aluguel ARF-São Carlos","risco":"Baixo","responsavel":"Marcos / Gustavo / Vinícius","prazo":"","processo":"","observacao":"Foram realizadas trataivas para aluguel de nova agência. No futuro a agência será compartilhada com o INSS, os estudos já foram feitos","andamento":"B - Em espera / próximo"},{"iniciativa":"Reparo nas esquadrias da ALF-Santos","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Cafeteria ALF-Santos","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Recuperação vitrais ALF-Santos","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Luminotécnico ALF-Santos","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Adaptação novo DMA-Taubaté","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Novo Canil - Cobertura da Florêncio","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Conclusão da obra da Agência Modelo de Itanhaém","risco":"Alto","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Remanescente do Projeto Básico de Retrofit da DRF/Campinas","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"B - Em espera / próximo"},{"iniciativa":"Reforma das Calhas do DMA/Bauru","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Previsto no PE, deve ser tratada junto com a reforma do telhado","andamento":"B - Em espera / próximo"},{"iniciativa":"Projeto de adaptação da Direp/Florêncio de acordo com laudo estrutural","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Aguardando resultado do laudo","andamento":"B - Em espera / próximo"},{"iniciativa":"Reformas DMA/Araraquara","risco":"Alto","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Execução de obra para obtenção do AVCB DMA/Bauru","risco":"Alto","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Obra para nova DRF/Guarulhos","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Reparo do chiller da DRF/Limeira","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Reparo do ar-condicionado da ARF/Taubaté","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Modernização da Cabine Primária e substituição do gerador da DRF/Osasco","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Reparo do espelho d'água da DRF/Franca","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Aguardando processo de acionamento de garantia da construtora","andamento":"C - Sem previsão de início"},{"iniciativa":"Projeto Básico e execução de medidas de acessibilidade da ARF/São Bernardo do Campo","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Contratação de CFTV para AFL-São Paulo/Decex","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Projeto Básico para Retrofit da DRF/São José do Rio Preto","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Retrofit da DRF/Campinas","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Aguardando contratação do remanescente do PB","andamento":"C - Sem previsão de início"},{"iniciativa":"Adaptações estruturais e instalação de painel solar DMA/Ipiranga","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"Aguardando definição sobre gestão da RFB do depósito","andamento":"C - Sem previsão de início"},{"iniciativa":"Reparo do sistema elétrico de média e baixa tensão da DRF/Limeira","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Modernização dos elevadores da ALF/Santos","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Contratação de assessoria técnica para sistemas de refrigeração do ar-condicionado dos edifícios da ARF/São Bernardo do Campo e Direp","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Projeto básico para substituição da cabine primária da ARF/São Bernardo do Campo","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Substituição da cabine primária da ARF/São Bernardo do Campo","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Substituição do transformador da cabine de força da ARF/Araçatuba","risco":"Médio","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Projeto básico para construção da DRF/Presidente Prudente","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Contratação de empresa para mudança na comunicação visual dos edifícios da 8ªRF após o novo regimento interno","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Projeto Básico para manutenção/reparo/substituição de janelas e esquadrias da DRF/Santo André","risco":"Baixo","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Substituição do revestimento do piso da garagem e das rampas de acesso da DRF/Santo André","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Instalação de sistema fotovoltáico da DRF/Franca","risco":"Sem risco","responsavel":"Eqeng","prazo":"","processo":"","observacao":"","andamento":"C - Sem previsão de início"},{"iniciativa":"Remoção marquise danificada DMA/Marília","risco":"Médio","responsavel":"Epprecht / Paulo","prazo":"2026-04-13","processo":"","observacao":"Marquise foi removida de 13/04, durante a remoção surgiu a necessidade de serviços adicionais no DMA para fechamento da estrutura","andamento":"D - Concluído"},{"iniciativa":"Laudo Estrutural - Direp/Florêncio","risco":"Alto","responsavel":"Gustavo / Marcos","prazo":"2026-04-01","processo":"13032.150250/2026-10","observacao":"Laudo entregue em 01/04. Recomenda-se a remoção de 25% dos arquivos e não colocar peso adicional na estrutura","andamento":"D - Concluído"},{"iniciativa":"Troca banco de capacitores DRF/Araçatuba","risco":"Baixo","responsavel":"André","prazo":"2026-04-06","processo":"","observacao":"Recebido. Visita técnica de acompanhamento da instalação realizada dia 20/03. Durante a visita foi vericiado problema no disjuntos de média tensão da cabine primária, é necessária a manutenção corretiva/modernização","andamento":"D - Concluído"}];
+
+const allData = RAW_DATA.map((d,i) => ({...d, idx:i, prazo: fmtPrazo(d.prazo)}));
+let feedbacks = {}, activeFilters = {status:'all', risk:'all', person:'all'}, selectedIdx = null;
+
+function fmtPrazo(p) {
+  if (!p) return '—';
+  const m = p.match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : p;
+}
+function sc(s) { return String(s||'').trim().charAt(0).toUpperCase(); }
+function statusLabel(s) { return {A:'Sendo trabalhado',B:'Em espera / próximo',C:'Sem previsão de início',D:'Concluído'}[sc(s)]||s; }
+function riskKey(r) { return String(r||'').toLowerCase().includes('sem') ? 'Sem risco' : String(r||'').trim(); }
+
+function init() {
+  populatePersonFilter();
+  renderStats();
+  renderList();
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ft = btn.dataset.filter;
+      document.querySelectorAll(`.filter-btn[data-filter="${ft}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilters[ft] = btn.dataset.val;
+      renderList();
+    });
+  });
+}
+
+function populatePersonFilter() {
+  const sel = document.getElementById('person-filter');
+  [...new Set(allData.map(d=>d.responsavel).filter(Boolean))].sort().forEach(p => {
+    const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => { activeFilters.person = sel.value; renderList(); });
+}
+
+function renderStats() {
+  const c = {A:0,B:0,C:0,D:0};
+  allData.forEach(d => { const k=sc(d.andamento); if(c[k]!==undefined) c[k]++; });
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card green" onclick="filterByStatus('A')"><div class="stat-num">${c.A}</div><div class="stat-label">Trabalhando</div></div>
+    <div class="stat-card yellow" onclick="filterByStatus('B')"><div class="stat-num">${c.B}</div><div class="stat-label">Em espera</div></div>
+    <div class="stat-card red" onclick="filterByStatus('C')"><div class="stat-num">${c.C}</div><div class="stat-label">Sem previsão</div></div>
+    <div class="stat-card gray" onclick="filterByStatus('D')"><div class="stat-num">${c.D}</div><div class="stat-label">Concluídos</div></div>`;
+}
+
+function filterByStatus(val) {
+  activeFilters.status = activeFilters.status === val ? 'all' : val;
+  document.querySelectorAll('.filter-btn[data-filter="status"]').forEach(b =>
+    b.classList.toggle('active', b.dataset.val === activeFilters.status || (activeFilters.status==='all' && b.dataset.val==='all'))
+  );
+  renderList();
+}
+
+function getFiltered() {
+  return allData.filter(d => {
+    if (activeFilters.status !== 'all' && sc(d.andamento) !== activeFilters.status) return false;
+    if (activeFilters.risk !== 'all' && riskKey(d.risco) !== activeFilters.risk) return false;
+    if (activeFilters.person !== 'all' && d.responsavel !== activeFilters.person) return false;
+    return true;
+  });
+}
+
+function renderList() {
+  const filtered = getFiltered();
+  document.getElementById('list-count').textContent = `${filtered.length} demanda${filtered.length!==1?'s':''}`;
+  const container = document.getElementById('demand-list');
+  if (!filtered.length) { container.innerHTML = '<div class="no-results">Nenhuma demanda com esses filtros.</div>'; return; }
+  container.innerHTML = '';
+  filtered.forEach((d,i) => {
+    const code = sc(d.andamento), rk = riskKey(d.risco), hasFb = feedbacks[d.idx]?.trim();
+    const card = document.createElement('div');
+    card.className = 'demand-card card-anim' + (selectedIdx===d.idx?' selected':'');
+    card.dataset.risk = rk; card.dataset.idx = d.idx;
+    card.style.animationDelay = `${i*0.025}s`;
+    card.innerHTML = `
+      <div class="demand-info">
+        <div class="demand-title">${d.iniciativa}</div>
+        <div class="demand-meta">
+          <span class="tag tag-risk-${rk==='Sem risco'?'Sem':d.risco}">${d.risco||'Sem risco'}</span>
+          <span class="tag tag-status-${code}">${statusLabel(d.andamento)}</span>
+          ${d.responsavel?`<span class="tag tag-person">👤 ${d.responsavel}</span>`:''}
+          ${d.prazo&&d.prazo!=='—'?`<span class="tag tag-deadline">📅 ${d.prazo}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">${hasFb?'<div class="feedback-dot" title="Com feedback"></div>':''}</div>`;
+    card.addEventListener('click', () => selectDemand(d.idx));
+    container.appendChild(card);
+  });
+}
+
+function selectDemand(idx) {
+  selectedIdx = idx;
+  const d = allData[idx];
+  document.querySelectorAll('.demand-card').forEach(c => c.classList.toggle('selected', parseInt(c.dataset.idx)===idx));
+  document.getElementById('detail-empty').style.display = 'none';
+  document.getElementById('detail-content').style.display = 'block';
+  document.getElementById('d-title').textContent = d.iniciativa;
+  document.getElementById('d-resp').textContent = d.responsavel||'—';
+  document.getElementById('d-risk').textContent = d.risco||'—';
+  document.getElementById('d-status').textContent = statusLabel(d.andamento);
+  document.getElementById('d-prazo').textContent = d.prazo||'—';
+  document.getElementById('d-proc').textContent = d.processo||'—';
+  document.getElementById('d-proc-row').style.display = d.processo?'flex':'none';
+  const ow = document.getElementById('d-obs-wrap');
+  if (d.observacao) { ow.style.display='block'; document.getElementById('d-obs').textContent=d.observacao; } else ow.style.display='none';
+  const saved = feedbacks[idx]||'';
+  const savedEl = document.getElementById('saved-feedback');
+  document.getElementById('feedback-input').value = saved;
+  savedEl.style.display = saved?'block':'none';
+  if (saved) savedEl.textContent = '💬 '+saved;
+}
+
+function saveFeedback() {
+  if (selectedIdx===null) return;
+  const val = document.getElementById('feedback-input').value.trim();
+  feedbacks[selectedIdx] = val;
+  const savedEl = document.getElementById('saved-feedback');
+  savedEl.style.display = val?'block':'none';
+  if (val) savedEl.textContent = '💬 '+val;
+  renderList();
+  const btn = event.target, orig = btn.textContent;
+  btn.textContent='✓ Salvo!'; btn.style.background='var(--success)';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; }, 1500);
+}
+
+function clearFeedback() {
+  if (selectedIdx===null) return;
+  document.getElementById('feedback-input').value='';
+  feedbacks[selectedIdx]='';
+  document.getElementById('saved-feedback').style.display='none';
+  renderList();
+}
+
+init();
+</script>
+</body>
+</html>
